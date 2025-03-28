@@ -13,7 +13,13 @@ const DEFAULT_CONFIG: ServerConfig = {
   dataDir: path.join(process.cwd(), 'doc-mcp-data'),
   useVectors: false,
   vectorDimension: 1536,
-  verbose: false
+  verbose: false,
+  
+  // Content filtering options
+  removeImages: true,
+  removeStyles: true,
+  removeScripts: true,
+  maxContentSize: 10 * 1024 * 1024 // 10MB
 };
 
 // Export the server start function

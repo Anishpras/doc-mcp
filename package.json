@@ -8,7 +8,7 @@
   },
   "type": "module",
   "scripts": {
-    "build": "tsc && node build.js",
+    "build": "tsc --skipLibCheck && node build-post.js",
     "start": "node dist/cli.js",
     "dev": "ts-node --esm src/cli.ts",
     "prepublishOnly": "npm run build"

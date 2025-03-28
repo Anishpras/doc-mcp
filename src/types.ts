@@ -5,6 +5,12 @@ export interface ServerConfig {
   useVectors: boolean;
   vectorDimension: number;
   verbose: boolean;
+  
+  // Content filtering options
+  removeImages: boolean; // Remove img, svg, canvas, etc.
+  removeStyles: boolean; // Remove style tags and attributes
+  removeScripts: boolean; // Remove script tags
+  maxContentSize: number; // Maximum content size in bytes
 }
 
 // MCP Message interfaces

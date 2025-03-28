@@ -1,38 +1,676 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Doc MCP Client</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1,
+      h2 {
+        margin-top: 0;
+      }
+      .card {
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 14px;
+      }
+      button {
+        background: #4a6ee0;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #3a5bd0;
+      }
+      .connection-status {
+        padding: 8px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+      .connected {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .disconnected {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+      .connecting {
+        background-color: #fff3cd;
+        color: #856404;
+      }
+      .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      pre {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 4px;
+        overflow: auto;
+        max-height: 400px;
+      }
+      .tab-container {
+        display: flex;
+        margin-bottom: 20px;
+      }
+      .tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        background: #f1f1f1;
+        border: 1px solid #ddd;
+        border-radius: 4px 4px 0 0;
+        margin-right: 5px;
+      }
+      .tab.active {
+        background: #4a6ee0;
+        color: white;
+        border-color: #4a6ee0;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .documentation-container {
+        margin-top: 20px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 20px;
+        background: white;
+      }
+      .document-section {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+      }
+      .document-section:last-child {
+        border-bottom: none;
+      }
+      .document-section h3 {
+        margin-top: 0;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+      }
+      #docList {
+        list-style: none;
+        padding: 0;
+      }
+      #docList li {
+        padding: 10px;
+        background: #fff;
+        margin-bottom: 8px;
+        border-radius: 4px;
+        border: 1px solid #eee;
+        cursor: pointer;
+      }
+      #docList li:hover {
+        background: #f0f7ff;
+      }
+      .search-result {
+        padding: 10px;
+        background: #fff;
+        margin-bottom: 8px;
+        border-radius: 4px;
+        border: 1px solid #eee;
+      }
+      .search-result h4 {
+        margin-top: 0;
+        margin-bottom: 5px;
+      }
+      .search-result .score {
+        background: #e2f2ff;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 12px;
+        margin-left: 8px;
+      }
+    </style>
   </head>
   <body>
-    <h1>Doc MCP Client</h1>
-    <div>
-      <input id="url" type="text" placeholder="URL" style="width: 400px" />
-      <button onclick="fetchDoc()">Fetch Documentation</button>
+    <h1>Documentation MCP Client</h1>
+
+    <div class="connection-status disconnected" id="connectionStatus">
+      Disconnected
     </div>
-    <div id="result" style="margin-top: 20px; white-space: pre-wrap"></div>
+
+    <div class="tab-container">
+      <div class="tab active" onclick="showTab('fetchTab')">
+        Fetch Documentation
+      </div>
+      <div class="tab" onclick="showTab('searchTab')">Search</div>
+      <div class="tab" onclick="showTab('listTab')">List Documents</div>
+      <div class="tab" onclick="showTab('getDocTab')">Get Document</div>
+    </div>
+
+    <!-- Fetch Documentation Tab -->
+    <div class="tab-content active" id="fetchTab">
+      <div class="card">
+        <h2>Fetch Documentation</h2>
+        <div class="form-group">
+          <label for="fetchUrl">URL</label>
+          <input
+            id="fetchUrl"
+            type="text"
+            placeholder="https://example.com/docs" />
+        </div>
+        <div class="form-group">
+          <label for="selector">CSS Selector (optional)</label>
+          <input
+            id="selector"
+            type="text"
+            placeholder="main, .content, #documentation, etc." />
+        </div>
+        <div class="form-group">
+          <label>
+            <input id="forceRefresh" type="checkbox" />
+            Force refresh (ignore cache)
+          </label>
+        </div>
+        <button onclick="fetchDocumentation()">Fetch Documentation</button>
+      </div>
+
+      <div class="card">
+        <div class="result-header">
+          <h2>Fetch Result</h2>
+          <button onclick="clearResults('fetchResult')">Clear</button>
+        </div>
+        <pre id="fetchResult">No results yet</pre>
+      </div>
+    </div>
+
+    <!-- Search Tab -->
+    <div class="tab-content" id="searchTab">
+      <div class="card">
+        <h2>Search Documentation</h2>
+        <div class="form-group">
+          <label for="searchQuery">Search Query</label>
+          <input
+            id="searchQuery"
+            type="text"
+            placeholder="Enter your search query" />
+        </div>
+        <div class="form-group">
+          <label for="searchLimit">Result Limit</label>
+          <input id="searchLimit" type="number" value="10" min="1" max="100" />
+        </div>
+        <div class="form-group">
+          <label>
+            <input id="semantic" type="checkbox" />
+            Use semantic search (if available)
+          </label>
+        </div>
+        <button onclick="searchDocumentation()">Search</button>
+      </div>
+
+      <div class="card">
+        <div class="result-header">
+          <h2>Search Results</h2>
+          <button onclick="clearResults('searchResultsList')">Clear</button>
+        </div>
+        <div id="searchResultsList">No results yet</div>
+      </div>
+    </div>
+
+    <!-- List Documents Tab -->
+    <div class="tab-content" id="listTab">
+      <div class="card">
+        <h2>List Documents</h2>
+        <div class="form-group">
+          <label for="listLimit">Result Limit</label>
+          <input id="listLimit" type="number" value="20" min="1" max="100" />
+        </div>
+        <div class="form-group">
+          <label for="listOffset">Offset (for pagination)</label>
+          <input id="listOffset" type="number" value="0" min="0" />
+        </div>
+        <button onclick="listDocumentation()">List Documents</button>
+      </div>
+
+      <div class="card">
+        <div class="result-header">
+          <h2>Document List</h2>
+          <div class="button-group">
+            <button onclick="loadMoreDocuments()">Load More</button>
+            <button onclick="clearResults('docList')">Clear</button>
+          </div>
+        </div>
+        <ul id="docList">
+          No documents yet
+        </ul>
+      </div>
+    </div>
+
+    <!-- Get Document Tab -->
+    <div class="tab-content" id="getDocTab">
+      <div class="card">
+        <h2>Get Specific Document</h2>
+        <div class="form-group">
+          <label for="getDocUrl">URL</label>
+          <input
+            id="getDocUrl"
+            type="text"
+            placeholder="https://example.com/docs" />
+        </div>
+        <div class="form-group">
+          <label for="getDocId">Document ID (alternative to URL)</label>
+          <input id="getDocId" type="number" placeholder="1" />
+        </div>
+        <button onclick="getDocument()">Get Document</button>
+      </div>
+
+      <div class="card">
+        <div class="result-header">
+          <h2>Document</h2>
+          <button onclick="clearResults(['getDocResult', 'documentContent'])">
+            Clear
+          </button>
+        </div>
+        <pre id="getDocResult">No document loaded yet</pre>
+
+        <div
+          id="documentContent"
+          class="documentation-container"
+          style="display: none">
+          <h2 id="docTitle"></h2>
+          <p><strong>URL:</strong> <span id="docUrl"></span></p>
+          <div id="docSections"></div>
+        </div>
+      </div>
+    </div>
 
     <script>
-      const ws = new WebSocket("ws://localhost:3000");
-      const resultDiv = document.getElementById("result");
+      let ws;
+      let currentDocOffset = 0;
+      const docLimit = 20;
 
-      ws.onopen = () => {
-        resultDiv.textContent = "Connected to MCP server";
-      };
+      // Connect to MCP server
+      function connectWebSocket() {
+        const statusEl = document.getElementById("connectionStatus");
+        statusEl.className = "connection-status connecting";
+        statusEl.textContent = "Connecting...";
 
-      ws.onmessage = (event) => {
-        const response = JSON.parse(event.data);
-        resultDiv.textContent = JSON.stringify(response, null, 2);
-      };
+        ws = new WebSocket("ws://localhost:3000");
 
-      function fetchDoc() {
-        const url = document.getElementById("url").value;
-        ws.send(
-          JSON.stringify({
-            type: "fetch_documentation",
-            url: url,
-          })
-        );
+        ws.onopen = () => {
+          statusEl.className = "connection-status connected";
+          statusEl.textContent = "Connected";
+          console.log("Connected to MCP server");
+        };
+
+        ws.onclose = () => {
+          statusEl.className = "connection-status disconnected";
+          statusEl.textContent = "Disconnected";
+          console.log("Disconnected from MCP server");
+          // Try to reconnect after 5 seconds
+          setTimeout(connectWebSocket, 5000);
+        };
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+
+        ws.onmessage = (event) => {
+          const response = JSON.parse(event.data);
+          console.log("Received:", response);
+
+          // Handle different response types
+          switch (response.type) {
+            case "documentation_fetched":
+              handleDocumentationFetched(response);
+              break;
+            case "search_results":
+              handleSearchResults(response);
+              break;
+            case "documentation_list":
+              handleDocumentList(response);
+              break;
+            case "documentation":
+              handleDocumentation(response);
+              break;
+            case "error":
+              handleError(response);
+              break;
+            default:
+              console.log("Unhandled response type:", response.type);
+          }
+        };
       }
+
+      // Tab navigation
+      function showTab(tabId) {
+        // Hide all tabs
+        const tabContents = document.querySelectorAll(".tab-content");
+        tabContents.forEach((tab) => tab.classList.remove("active"));
+
+        // Deactivate all tab buttons
+        const tabs = document.querySelectorAll(".tab");
+        tabs.forEach((tab) => tab.classList.remove("active"));
+
+        // Show selected tab
+        document.getElementById(tabId).classList.add("active");
+
+        // Activate selected tab button
+        Array.from(document.querySelectorAll(".tab"))
+          .find((tab) => tab.getAttribute("onclick").includes(tabId))
+          .classList.add("active");
+      }
+
+      // Fetch documentation
+      function fetchDocumentation() {
+        const url = document.getElementById("fetchUrl").value.trim();
+        if (!url) {
+          alert("Please enter a URL");
+          return;
+        }
+
+        const selector = document.getElementById("selector").value.trim();
+        const forceRefresh = document.getElementById("forceRefresh").checked;
+
+        const message = {
+          type: "fetch_documentation",
+          url: url,
+        };
+
+        if (selector) message.selector = selector;
+        if (forceRefresh) message.forceRefresh = true;
+
+        sendMessage(message);
+      }
+
+      // Search documentation
+      function searchDocumentation() {
+        const query = document.getElementById("searchQuery").value.trim();
+        if (!query) {
+          alert("Please enter a search query");
+          return;
+        }
+
+        const limit =
+          parseInt(document.getElementById("searchLimit").value) || 10;
+        const semantic = document.getElementById("semantic").checked;
+
+        const message = {
+          type: "search_documentation",
+          query: query,
+          limit: limit,
+          semantic: semantic,
+        };
+
+        sendMessage(message);
+      }
+
+      // List documentation
+      function listDocumentation() {
+        const limit =
+          parseInt(document.getElementById("listLimit").value) || 20;
+        const offset =
+          parseInt(document.getElementById("listOffset").value) || 0;
+
+        // Reset the current offset if the user changed it manually
+        currentDocOffset = offset;
+
+        const message = {
+          type: "list_documentation",
+          limit: limit,
+          offset: offset,
+        };
+
+        sendMessage(message);
+      }
+
+      // Load more documents
+      function loadMoreDocuments() {
+        currentDocOffset += docLimit;
+        document.getElementById("listOffset").value = currentDocOffset;
+        listDocumentation();
+      }
+
+      // Get specific document
+      function getDocument() {
+        const url = document.getElementById("getDocUrl").value.trim();
+        const id = document.getElementById("getDocId").value.trim();
+
+        if (!url && !id) {
+          alert("Please enter either a URL or a Document ID");
+          return;
+        }
+
+        const message = {
+          type: "get_documentation",
+        };
+
+        if (url) message.url = url;
+        if (id) message.documentId = parseInt(id);
+
+        sendMessage(message);
+      }
+
+      // Get document by clicking on list item
+      function getDocumentById(id) {
+        const message = {
+          type: "get_documentation",
+          documentId: id,
+        };
+
+        // Switch to the Get Document tab
+        showTab("getDocTab");
+
+        sendMessage(message);
+      }
+
+      // Send WebSocket message
+      function sendMessage(message) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          alert(
+            "WebSocket not connected. Please refresh the page to reconnect."
+          );
+          return;
+        }
+
+        ws.send(JSON.stringify(message));
+      }
+
+      // Handle documentation fetched response
+      function handleDocumentationFetched(response) {
+        const resultEl = document.getElementById("fetchResult");
+        resultEl.textContent = JSON.stringify(response, null, 2);
+
+        // If the fetch was successful and we have a document ID, we can offer to view it
+        if (response.status === "success" && response.documentId) {
+          const viewButton = document.createElement("button");
+          viewButton.textContent = "View Document";
+          viewButton.onclick = () => {
+            getDocumentById(response.documentId);
+          };
+
+          resultEl.after(viewButton);
+        }
+      }
+
+      // Handle search results
+      function handleSearchResults(response) {
+        const resultsEl = document.getElementById("searchResultsList");
+
+        if (!response.results || response.results.length === 0) {
+          resultsEl.innerHTML =
+            "<p>No results found for: " + response.query + "</p>";
+          return;
+        }
+
+        let html = `<p>Found ${response.results.length} results for: ${response.query}</p>`;
+
+        response.results.forEach((result) => {
+          html += `
+          <div class="search-result">
+            <h4>${result.title || "Untitled"}
+              ${
+                result.score
+                  ? '<span class="score">Score: ' + result.score + "</span>"
+                  : ""
+              }
+            </h4>
+            <p>${result.snippet || "No snippet available"}</p>
+            <button onclick="getDocumentById(${
+              result.id
+            })">View Document</button>
+          </div>
+        `;
+        });
+
+        resultsEl.innerHTML = html;
+      }
+
+      // Handle document list
+      function handleDocumentList(response) {
+        const listEl = document.getElementById("docList");
+
+        if (!response.documents || response.documents.length === 0) {
+          listEl.innerHTML = "<p>No documents found</p>";
+          return;
+        }
+
+        // If this is a fresh list (offset is 0), clear the list first
+        if (response.offset === 0) {
+          listEl.innerHTML = "";
+        }
+
+        // Add documents to the list
+        response.documents.forEach((doc) => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+          <strong>${doc.title || "Untitled"}</strong>
+          <p>URL: ${doc.url}</p>
+          <p>Last updated: ${new Date(doc.updated_at).toLocaleString()}</p>
+          <p>Chunks: ${doc.chunk_count}</p>
+        `;
+          li.onclick = () => getDocumentById(doc.id);
+          listEl.appendChild(li);
+        });
+
+        // Show a message if we've reached the end
+        if (response.documents.length < response.limit) {
+          const li = document.createElement("li");
+          li.textContent = "End of list reached";
+          li.style.textAlign = "center";
+          li.style.fontStyle = "italic";
+          listEl.appendChild(li);
+        }
+      }
+
+      // Handle documentation response
+      function handleDocumentation(response) {
+        // Show the raw response
+        document.getElementById("getDocResult").textContent = JSON.stringify(
+          response,
+          null,
+          2
+        );
+
+        // Also display the content in a more readable format
+        const contentEl = document.getElementById("documentContent");
+        const titleEl = document.getElementById("docTitle");
+        const urlEl = document.getElementById("docUrl");
+        const sectionsEl = document.getElementById("docSections");
+
+        // Clear previous content
+        sectionsEl.innerHTML = "";
+
+        // Set document title and URL
+        titleEl.textContent = response.title || "Untitled Document";
+        urlEl.textContent = response.url || "Unknown URL";
+
+        // Display the document chunks
+        if (response.chunks && response.chunks.length > 0) {
+          response.chunks.forEach((chunk) => {
+            const section = document.createElement("div");
+            section.className = "document-section";
+            section.innerHTML = `
+            <h3>Chunk ${chunk.index}</h3>
+            <div>${chunk.content}</div>
+          `;
+            sectionsEl.appendChild(section);
+          });
+        } else {
+          // If no chunks, display the full content
+          const section = document.createElement("div");
+          section.className = "document-section";
+          section.innerHTML = `<div>${
+            response.content || "No content available"
+          }</div>`;
+          sectionsEl.appendChild(section);
+        }
+
+        // Show the content container
+        contentEl.style.display = "block";
+      }
+
+      // Handle error response
+      function handleError(response) {
+        console.error("Error from server:", response);
+        alert(`Error: ${response.error}\n${response.details || ""}`);
+      }
+
+      // Clear results
+      function clearResults(elementIds) {
+        if (!Array.isArray(elementIds)) {
+          elementIds = [elementIds];
+        }
+
+        elementIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el.tagName === "PRE") {
+            el.textContent = "Cleared";
+          } else if (el.tagName === "UL") {
+            el.innerHTML = "<li>Cleared</li>";
+          } else {
+            el.innerHTML = "Cleared";
+          }
+
+          // Hide document content if clearing it
+          if (id === "documentContent") {
+            el.style.display = "none";
+          }
+        });
+      }
+
+      // Initialize when page loads
+      window.onload = () => {
+        connectWebSocket();
+      };
     </script>
   </body>
 </html>

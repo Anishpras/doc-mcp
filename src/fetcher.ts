@@ -1,7 +1,16 @@
 import fetch from 'node-fetch';
+import { ServerConfig } from './types.js';
+import { cleanHtmlContent } from './content-cleaner.js';
 
 // Fetches HTML content from a given URL
-export async function fetchDocumentation(url: string): Promise<string> {
+export async function fetchDocumentation(url: string, config?: ServerConfig): Promise<string> {
+  // Set default config values if not provided
+  const cleaningConfig = {
+    removeImages: config?.removeImages !== undefined ? config.removeImages : true,
+    removeStyles: config?.removeStyles !== undefined ? config.removeStyles : true,
+    removeScripts: config?.removeScripts !== undefined ? config.removeScripts : true,
+    maxContentSize: config?.maxContentSize || 10 * 1024 * 1024 // 10MB default
+  };
   try {
     // Make the request with appropriate headers to mimic a browser
     const controller = new AbortController();
@@ -31,7 +40,10 @@ export async function fetchDocumentation(url: string): Promise<string> {
       throw new Error(`Unsupported content type: ${contentType}`);
     }
 
-    return await response.text();
+    const htmlContent = await response.text();
+    
+    // Clean the HTML content to remove unwanted elements
+    return cleanHtmlContent(htmlContent, cleaningConfig);
   } catch (error) {
     console.error(`Error fetching documentation from ${url}:`, error);
     throw error;

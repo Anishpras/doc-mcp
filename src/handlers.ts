@@ -74,11 +74,11 @@ async function handleFetchDocumentation(
 
     if (verbose) console.log(`Fetching documentation from ${url}`);
     
-    // Fetch the documentation
-    const htmlContent = await fetchDocumentation(url);
+    // Fetch the documentation with content cleaning
+    const htmlContent = await fetchDocumentation(url, config);
     
-    // Parse the content
-    const { title, content, sections } = await parseDocumentation(htmlContent, selector);
+    // Parse the content with content cleaning
+    const { title, content, sections } = await parseDocumentation(htmlContent, selector, config);
     
     // Create a hash of the content to detect changes
     const contentHash = crypto

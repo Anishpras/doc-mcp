@@ -38,6 +38,10 @@ program
   .option('-v, --vectors', 'Enable vector storage for semantic search', false)
   .option('--dimension <number>', 'Vector dimension for embeddings', '1536')
   .option('--verbose', 'Enable verbose logging', false)
+  .option('--keep-images', 'Keep images and SVGs in documentation', false)
+  .option('--keep-styles', 'Keep CSS styles in documentation', false)
+  .option('--keep-scripts', 'Keep scripts in documentation', false)
+  .option('--max-content-size <number>', 'Maximum content size in MB', '10')
   .action(async (options) => {
     const port = options.port ? parseInt(options.port) : await portfinder.getPortPromise({ port: 3000 });
     
@@ -49,6 +53,10 @@ program
     console.log(`- Port: ${port}`);
     console.log(`- Data directory: ${options.data}`);
     console.log(`- Vector storage: ${options.vectors ? 'Enabled' : 'Disabled'}`);
+    console.log(`- Filter images/SVGs: ${!options.keepImages ? 'Enabled' : 'Disabled'}`);
+    console.log(`- Filter styles: ${!options.keepStyles ? 'Enabled' : 'Disabled'}`);
+    console.log(`- Filter scripts: ${!options.keepScripts ? 'Enabled' : 'Disabled'}`);
+    console.log(`- Max content size: ${options.maxContentSize} MB`);
     if (options.vectors) {
       console.log(`- Vector dimension: ${options.dimension}`);
     }
@@ -61,7 +69,13 @@ program
         dataDir: options.data,
         useVectors: options.vectors,
         vectorDimension: parseInt(options.dimension),
-        verbose: options.verbose
+        verbose: options.verbose,
+        
+        // Content filtering options
+        removeImages: !options.keepImages,
+        removeStyles: !options.keepStyles,
+        removeScripts: !options.keepScripts,
+        maxContentSize: parseInt(options.maxContentSize) * 1024 * 1024 // Convert MB to bytes
       });
       
       console.log(chalk.green(`\n✅ Server started successfully!`));

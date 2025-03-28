@@ -1,6 +1,11 @@
 import cheerio from 'cheerio';
 import TurndownService from 'turndown';
-import { ParsedDocumentation, Section } from './types.js';
+import { ParsedDocumentation, Section, ServerConfig } from './types.js';
+import { cleanContentWithCheerio } from './content-cleaner.js';
+
+// Using any to work around TypeScript issues
+type CheerioAPI = any;
+type CheerioElement = any;
 
 // Initialize the HTML to Markdown converter
 // Create turndown service - using any to avoid TypeScript errors
@@ -48,10 +53,11 @@ turndownService.addRule('tables', {
 // Parses HTML content into structured documentation
 export async function parseDocumentation(
   htmlContent: string, 
-  selector: string = 'body'
+  selector: string = 'body',
+  config?: ServerConfig
 ): Promise<ParsedDocumentation> {
   // Parse HTML with cheerio - handle both ESM and CJS imports
-  const $ = (cheerio as any).load(htmlContent);
+  const $ = (cheerio as any).load(htmlContent) as CheerioAPI;
   
   // Extract the title
   const title = $('title').text().trim() || 'Untitled Documentation';
@@ -63,8 +69,18 @@ export async function parseDocumentation(
     throw new Error(`Selector "${selector}" did not match any elements`);
   }
   
-  // Clean up the content
-  cleanupContent($, mainContent);
+  // Clean up the content with appropriate config
+  cleanupContent($, mainContent, config || {
+    port: 0,
+    dataDir: '',
+    useVectors: false,
+    vectorDimension: 0,
+    verbose: false,
+    removeImages: true,
+    removeStyles: true,
+    removeScripts: true,
+    maxContentSize: 10 * 1024 * 1024 // 10MB
+  });
   
   // Extract the full content as Markdown
   const mainHtml = mainContent.html() || '';
@@ -81,28 +97,19 @@ export async function parseDocumentation(
 }
 
 // Clean up the HTML content (remove unnecessary elements)
-function cleanupContent($, element) {
-  // Remove elements that are typically not part of the main content
-  element.find('script, style, iframe, nav:not([role="navigation"]), footer, aside, .comments, .ads, .banner, .navigation').remove();
-  
-  // Remove any invisible elements
-  element.find('[style*="display: none"], [style*="display:none"], [hidden]').remove();
-  
-  // Remove any elements that might contain dynamically loaded content
-  element.find('[data-loading], .loading-placeholder').remove();
-  
-  // Remove elements with specific classes (modify as needed)
-  element.find('.sidebar, .menu, .share-buttons, .related-posts').remove();
+function cleanupContent($: CheerioAPI, element: CheerioElement, config: ServerConfig) {
+  // Use the centralized cleaning function
+  cleanContentWithCheerio($, element, config);
 }
 
 // Extract sections from the content based on headings
-function extractSections($, element) {
+function extractSections($: CheerioAPI, element: CheerioElement) {
   const sections: Section[] = [];
   let currentHeading: string | null = null;
   let currentContent: string[] = [];
   
   // Find all headings and their content
-  element.children().each((i, el) => {
+  element.children().each((i: number, el: any) => {
     const node = $(el);
     const tagName = el.tagName?.toLowerCase() || '';
     
