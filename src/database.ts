@@ -2,7 +2,20 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import path from 'path';
 import fs from 'fs';
-import { HierarchicalNSW } from 'hnswlib-node';
+// Define the interface for HierarchicalNSW since the type definitions are not complete
+interface HNSWLib {
+  new(space: string, dim: number): any;
+  readIndexSync(filename: string): void;
+  getCurrentCount(): number;
+  addPoint(point: number[], label: number): void;
+  writeIndexSync(filename: string): void;
+  searchKnn(query: number[], k: number): { distances: number[], neighbors: number[] };
+  removePoint(label: number): void;
+}
+
+// Fix for CommonJS module import
+import hnswlib from 'hnswlib-node';
+const { HierarchicalNSW } = hnswlib as { HierarchicalNSW: HNSWLib };
 import { 
   ServerConfig, 
   Document, 
@@ -12,7 +25,7 @@ import {
 } from './types.js';
 
 let db: any;
-let vectorIndex: HierarchicalNSW | null = null;
+let vectorIndex: any = null;
 let serverConfig: ServerConfig;
 
 export async function setupDatabase(config: ServerConfig): Promise<void> {

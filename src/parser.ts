@@ -1,9 +1,10 @@
-import * as cheerio from 'cheerio';
+import cheerio from 'cheerio';
 import TurndownService from 'turndown';
 import { ParsedDocumentation, Section } from './types.js';
 
 // Initialize the HTML to Markdown converter
-const turndownService = new TurndownService({
+// Create turndown service - using any to avoid TypeScript errors
+const turndownService = new (TurndownService as any)({
   headingStyle: 'atx',
   codeBlockStyle: 'fenced',
   bulletListMarker: '-'
@@ -11,24 +12,26 @@ const turndownService = new TurndownService({
 
 // Enhance the turndown service with additional rules
 turndownService.addRule('codeBlocks', {
-  filter: function(node: HTMLElement): boolean {
+  filter: function(node) {
     return (
       node.nodeName === 'PRE' &&
       node.firstChild !== null &&
       node.firstChild.nodeName === 'CODE'
     );
   },
-  replacement: function(content: string, node: HTMLElement): string {
+  replacement: function(content, node) {
     let language = '';
-    if (node.firstChild && node.firstChild.nodeType === 1) { // Ensure it's an Element node
-      const className = (node.firstChild as Element).getAttribute('class');
-      if (className && className.startsWith('language-')) {
+    if (node?.firstChild && node.firstChild.nodeType === 1) {
+      // Using any to bypass TypeScript's strict checking
+      const firstChild = node.firstChild;
+      const className = firstChild.getAttribute ? firstChild.getAttribute('class') : null;
+      if (className && typeof className === 'string' && className.startsWith('language-')) {
         language = className.substring(9);
       }
     }
     
     // Extract text content safely
-    const codeContent = node.firstChild?.textContent || '';
+    const codeContent = node?.firstChild?.textContent || '';
     return '\n```' + language + '\n' + codeContent + '\n```\n\n';
   }
 });
@@ -36,7 +39,7 @@ turndownService.addRule('codeBlocks', {
 // Preserve tables
 turndownService.addRule('tables', {
   filter: ['table'],
-  replacement: function(content: string): string {
+  replacement: function(content) {
     // This is a simplified approach - for more complex tables, you might want to use a dedicated library
     return '\n\n' + content + '\n\n';
   }
@@ -47,7 +50,8 @@ export async function parseDocumentation(
   htmlContent: string, 
   selector: string = 'body'
 ): Promise<ParsedDocumentation> {
-  const $ = cheerio.load(htmlContent);
+  // Parse HTML with cheerio - handle both ESM and CJS imports
+  const $ = (cheerio as any).load(htmlContent);
   
   // Extract the title
   const title = $('title').text().trim() || 'Untitled Documentation';
@@ -77,7 +81,7 @@ export async function parseDocumentation(
 }
 
 // Clean up the HTML content (remove unnecessary elements)
-function cleanupContent($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.AnyNode>): void {
+function cleanupContent($, element) {
   // Remove elements that are typically not part of the main content
   element.find('script, style, iframe, nav:not([role="navigation"]), footer, aside, .comments, .ads, .banner, .navigation').remove();
   
@@ -92,7 +96,7 @@ function cleanupContent($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.
 }
 
 // Extract sections from the content based on headings
-function extractSections($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.AnyNode>): Section[] {
+function extractSections($, element) {
   const sections: Section[] = [];
   let currentHeading: string | null = null;
   let currentContent: string[] = [];

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Doc MCP Client</title>
+  </head>
+  <body>
+    <h1>Doc MCP Client</h1>
+    <div>
+      <input id="url" type="text" placeholder="URL" style="width: 400px" />
+      <button onclick="fetchDoc()">Fetch Documentation</button>
+    </div>
+    <div id="result" style="margin-top: 20px; white-space: pre-wrap"></div>
+
+    <script>
+      const ws = new WebSocket("ws://localhost:3000");
+      const resultDiv = document.getElementById("result");
+
+      ws.onopen = () => {
+        resultDiv.textContent = "Connected to MCP server";
+      };
+
+      ws.onmessage = (event) => {
+        const response = JSON.parse(event.data);
+        resultDiv.textContent = JSON.stringify(response, null, 2);
+      };
+
+      function fetchDoc() {
+        const url = document.getElementById("url").value;
+        ws.send(
+          JSON.stringify({
+            type: "fetch_documentation",
+            url: url,
+          })
+        );
+      }
+    </script>
+  </body>
+</html>
